@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	author  = "seaung"
 	version = "1.0.0"
 )
 
@@ -15,8 +16,8 @@ func setOutput() *cli.StringFlag {
 	return &cli.StringFlag{
 		Name:    "output",
 		Aliases: []string{"o"},
-		Value:   "console",
-		Usage:   "Console print or serialize output.",
+		Value:   "",
+		Usage:   "Output result to file.",
 	}
 }
 
@@ -42,7 +43,7 @@ func setAddress() *cli.StringFlag {
 	return &cli.StringFlag{
 		Name:    "address",
 		Aliases: []string{"a"},
-		Value:   "127.0.0.1",
+		Value:   "",
 		Usage:   "Single address.",
 	}
 }
@@ -65,21 +66,27 @@ var options = []cli.Flag{
 }
 
 func run(c *cli.Context) error {
+	if c.Float64("thread") != 0 {
+	} else if c.String("address") != "" {
+	} else if c.String("shodan") != "" {
+	} else if c.String("input") != "" {
+	}
 	return nil
 }
 
 func Start() {
 	author := cli.Author{
-		Name: "seaung",
+		Name: author,
 	}
 
 	app := &cli.App{
-		Name:    "camover-go",
-		Usage:   "CamOver-go is a camera exploitation tool that allows to disclosure network camera admin password.",
-		Authors: []*cli.Author{&author},
-		Version: version,
-		Flags:   options,
-		Action:  run,
+		Name:                 "camover-go",
+		Usage:                "CamOver-go is a camera exploitation tool that allows to disclosure network camera admin password.",
+		EnableBashCompletion: true,
+		Authors:              []*cli.Author{&author},
+		Version:              version,
+		Flags:                options,
+		Action:               run,
 	}
 
 	if err := app.Run(os.Args); err != nil {

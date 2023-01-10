@@ -10,6 +10,7 @@ import (
 
 type CamoverCli struct {
 	delay float32
+	cam   Camover
 }
 
 type Camover struct {
@@ -80,9 +81,19 @@ func NewCamoverCli(delay float32) *CamoverCli {
 }
 
 func (c *CamoverCli) run(address string) bool {
-	return false
+	res, err := c.cam.Exploit(address)
+	if err != nil {
+		return false
+	}
+
+	Info(fmt.Sprintf("%s %s", res.Username, res.Password))
+	return true
 }
 
-func (c *CamoverCli) crack(address string) {}
+func (c *CamoverCli) crack(addresses []string) {
+	for _, address := range addresses {
+		_ = c.run(address)
+	}
+}
 
 func (c *CamoverCli) start() {}

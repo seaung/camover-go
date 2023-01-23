@@ -88,6 +88,8 @@ func (c *CamOverCli) thread(address string) bool {
 	return true
 }
 
+func (c *CamOverCli) outputResult(content string) {}
+
 func (c *CamOverCli) crack(addresses []string) {
 	var wg sync.WaitGroup
 
@@ -98,9 +100,9 @@ func (c *CamOverCli) crack(addresses []string) {
 		go func(address string) {
 			ok := c.thread(address)
 			if ok {
-				Process("")
+				Process("Found address : " + address)
 			} else {
-				Errorf("")
+				Errorf("Not Found target !")
 			}
 		}(address)
 	}

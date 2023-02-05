@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/fatih/color v1.13.0 // indirect
+	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.9 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/ns3777k/go-shodan/v4 v4.2.0 // indirect

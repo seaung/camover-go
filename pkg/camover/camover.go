@@ -124,8 +124,8 @@ func (c *CamOverCli) write2file(outputfile string) {}
 func (c *CamOverCli) crack(addresses []string, outputfile string) {
 	var wg sync.WaitGroup
 
+	wg.Add(3)
 	for _, address := range addresses {
-		wg.Add(3)
 		defer wg.Done()
 
 		go func(address string) {

@@ -1,10 +1,15 @@
-package pkg
+package log
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
+)
+
+const (
+	author  = "seaung"
+	version = "1.0.0"
 )
 
 func PrintEmpty(message string) {

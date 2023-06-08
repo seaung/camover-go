@@ -1,0 +1,3 @@
+/axis-media/media.amp?videocodec=h264&resolution=1280x720&fps=25
+/onvif-media/media.amp?profile=profile_1_h264&streamtype=multicast
+/axis-cgi/alwaysmulti.sdp?camera=1

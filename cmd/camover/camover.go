@@ -1,8 +1,9 @@
 package main
 
-import "seaung/camover-go/pkg"
+import "github.com/seaung/camover-go/pkg/camover"
+
 
 func main() {
-	pkg.ShowBanner()
-	pkg.Start()
+    camover.Run()
 }
+

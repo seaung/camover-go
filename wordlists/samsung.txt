@@ -1,4 +1,0 @@
-/onvif/profile2/media.smp
-/onvif/profile3/media.smp
-/onvif/multicast/profile2/media.smp
-/onvif/multicast/profile3/media.smp

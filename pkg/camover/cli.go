@@ -1,9 +1,11 @@
 package camover
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -95,6 +97,38 @@ func initCommandOptions() *cli.Command {
 }
 
 func (c *CamOverCLI) run() error {
+    if c.address != "" {
+        c.Logger.Info(fmt.Sprintf("Processing single address : %s\n", c.address))
+        c.processAddresses([]string{c.address})
+    } else if c.input != "" {
+        file, err := os.Open(c.input)
+        if err != nil {
+            return fmt.Errorf("failed to open input file: %v", err)
+        }
+
+        defer file.Close()
+
+        var addresses []string
+
+        scanner := bufio.NewScanner(file)
+        for scanner.Scan() {
+            addresses = append(addresses, scanner.Text())
+        }
+
+        if err := scanner.Err(); err != nil {
+            return fmt.Errorf("failed to read input file : %v\n", err)
+        }
+        c.processAddresses(addresses)
+    } else if c.shodanKey != "" {
+        addresses := c.fetchShodanAddress()
+        c.processAddresses(addresses)
+    } else if c.zoomeyeKey != "" {
+        addresses := c.fetchZoomEyeAddresses()
+        c.processAddresses(addresses)
+    } else {
+        c.Logger.Warning("No valid input provided. Use --help for options.")
+    }
+
 	return nil
 }
 
@@ -155,5 +189,32 @@ func (c *CamOverCLI) fetchShodanAddress() []string {
 }
 
 func (c *CamOverCLI) fetchZoomEyeAddresses() []string {
-	return nil
+    url := fmt.Sprintf("https://api.zoomeye.org/host/search?query=GoAhead 5ccc069c403ebaf9f0171e9517f40e41&page=1")
+    req, err := http.NewRequest(http.MethodGet, url, nil)
+    if err != nil {
+        return nil
+    }
+
+    req.Header.Set("Authorization", fmt.Sprintf("JWT %s", c.zoomeyeKey))
+
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil {
+        return nil
+    }
+
+    defer resp.Body.Close()
+
+    var zoomeyeResp ZoomeyeResponse
+
+    if err := json.NewDecoder(resp.Body).Decode(&zoomeyeResp); err != nil {
+        return nil
+    }
+
+    addresses := []string{}
+
+    for _, match := range zoomeyeResp.Matches {
+        addresses = append(addresses, fmt.Sprintf("%s:%d", match.IP, match.Port.Port))
+    }
+
+    return addresses
 }

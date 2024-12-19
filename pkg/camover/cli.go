@@ -44,6 +44,19 @@ type ZoomeyeResponse struct {
 	} `json:"matches"`
 }
 
+func Start() {
+    app := &cli.App{
+        Name: "CamOver",
+        Usage: "A camera exploit tool to extract credentials.",
+        Commands: []*cli.Command{
+            initCommandOptions(),
+        },
+    }
+    if err := app.Run(os.Args); err != nil {
+        fmt.Println(err)
+    }
+}
+
 func initCommandOptions() *cli.Command {
 	return &cli.Command{
 		Name:  "exploit",

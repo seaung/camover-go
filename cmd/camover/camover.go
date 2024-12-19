@@ -4,6 +4,6 @@ import "github.com/seaung/camover-go/pkg/camover"
 
 
 func main() {
-    camover.Run()
+    camover.Start()
 }
 

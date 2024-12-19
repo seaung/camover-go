@@ -74,6 +74,10 @@ func initCommandOptions() *cli.Command {
 				Name:  "input",
 				Usage: "Input file with list of addresses.",
 			},
+            &cli.StringFlag{
+                Name: "address",
+                Usage: "Single address to test.",
+            },
 			&cli.StringFlag{
 				Name:  "shodan",
 				Usage: "Shodan API Key.",
